@@ -9,9 +9,8 @@ def addFeatures(LC):
 
 
 if __name__ == "__main__":
-    keypointFolder = '/home/ian/openpose/output/keypoints/'
+    keypointFolder = '../keypoints/1/'
     keypointName = '1'
-    numFrames = 1
     pose = poseSequence2D(keypointFolder, keypointName, numFrames=44, hand=True)
     x = pose.linearClassifierFormatPose()
     y = np.ones(1,)
