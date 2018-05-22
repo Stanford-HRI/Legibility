@@ -1,10 +1,13 @@
 #!/usr/bin/python
-
+from scipy.spatial import distance
 from linearClassifier import linearClassifier
 from poseplot import poseSequence2D
 import numpy as np
 import pdb
 
+"""
+x: 1 x num pose points x num frames x 2
+"""
 # get first order approximation of velocity
 def averagePointVelocity(x):
     phi = np.sum((x[:, :, :-1, :] - x[:, :, 1:, :]) ** 2, axis=3)       # (x1 - x2) ** 2 + (y1 - y2) ** 2
@@ -12,9 +15,34 @@ def averagePointVelocity(x):
     phi = np.mean(phi, axis=2)                                          # take average velocity of a point
     phi = np.sum(phi, axis=1)                                           # sum average point velocities
     phi = np.array([phi])                                               # format the axes
-    
+
+def l2ToTarget(x, target_pos):
+    """
+    calculates l2 distance from body points to target and sums them
+    currently using: shoulder, elbow, wrist
+    """
+    #2-4 are pose points for right arm
+    #5-7 are pose points for left arm
+    right_arm = x[:, 2:5, :, :]
+    left_arm = x[:, 5:8, :, :]
+    l2_right = np.linalg.norm(right_arm - target_pos, axis=3) # numrows are the number of body points and number of columns are the number of frames for each body point
+    l2_left = np.linalg.norm(left_arm - target_pos, axis=3)
+    return l2_right, l2_left
+
+def averagePointAcceleration(x):
+    """
+    calculates average acceleration for each point
+    """
+    velocity = x[:, :, :-1, :] - x[:, :, 1:, :]
+    acceleration = velocity[:, :, :-1, :] - velocity[:, :, 1:, :]
+    phi = np.sum((acceleration) ** 2, axis=3)                           # (x1 - x2) ** 2 + (y1 - y2) ** 2
+    phi = np.sqrt(phi)                                                  # get magnitude of acceleration
+    phi = np.mean(phi, axis=2)                                          # take average acceleration of a point
+    phi = np.sum(phi, axis=1)                                           # sum average point acceleration
+    phi = np.array([phi])                                               # format the axes
+
 # extract joint angles  from body pose
-# returns joint time history array N x 4 x num frames 
+# returns joint time history array N x 4 x num frames
 # of [[[left shoulder angle (pts 3->2->5)], [right shoulder angle], [left elbow (pts 2, 3, 4)], [right elbow]] | ti]
 def getPoseAngles(x):
     # initialize angles
@@ -37,7 +65,7 @@ def getPoseAngles(x):
             # offset the angle
             ang[:, j, i] += joint_offset[j]
     return ang
-            
+
 if __name__ == '__main__':
     keypointFolder = '/home/ian/openpose/output/keypoints/'
     keypointName = '1'
