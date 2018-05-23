@@ -14,7 +14,8 @@ def averagePointVelocity(x):
     phi = np.sqrt(phi)                                                  # get magnitude of velocity
     phi = np.mean(phi, axis=2)                                          # take average velocity of a point
     phi = np.sum(phi, axis=1)                                           # sum average point velocities
-    phi = np.array([phi])                                               # format the axes
+    phi = np.array([phi]).T                                             # format the axes
+    return phi
 
 def l2ToTarget(x, target_pos):
     """
@@ -39,7 +40,50 @@ def averagePointAcceleration(x):
     phi = np.sqrt(phi)                                                  # get magnitude of acceleration
     phi = np.mean(phi, axis=2)                                          # take average acceleration of a point
     phi = np.sum(phi, axis=1)                                           # sum average point acceleration
-    phi = np.array([phi])                                               # format the axes
+    phi = np.array([phi]).T                                             # format the axes
+    return phi
+
+# return the average angular velocity for each joint
+# returns shape N x 4 
+def averageIndividualPoseAngularVelocity(x):
+    phi = getPoseAngularVelocities(x)                                   # get joint angle time history
+    phi = np.mean(phi, axis=2)                                          # take time average
+    return phi
+    
+# return the average angular acceleration for each joint
+# returns shape N x 4 
+def averageIndividualPoseAngularAcceleration(x):
+    phi = getPoseAngularAccelerations(x)                                # get joint angle time history
+    phi = np.mean(phi, axis=2)                                          # take time average
+    return phi
+    
+# return the average angular jerks for each joint
+# returns shape N x 4 
+def averageIndividualPoseAngularJerk(x):
+    phi = getPoseAngularJerks(x)                                        # get joint angle time history
+    phi = np.mean(phi, axis=2)                                          # take time average
+    return phi
+    
+# return the average angular velocity for all joints
+# returns shape N x 1 
+def averageIndividualPoseAngularVelocity(x):
+    phi = getPoseAngularVelocities(x)                                   # get joint angle time history
+    phi = np.mean(phi, axis=(1, 2))                                     # take average
+    return phi
+    
+# return the average angular acceleration for all joints
+# returns shape N x 1
+def averageIndividualPoseAngularAcceleration(x):
+    phi = getPoseAngularAccelerations(x)                                # get joint angle time history
+    phi = np.mean(phi, axis=(1, 2))                                     # take average
+    return phi
+    
+# return the average angular jerks for all joints
+# returns shape N x 1 
+def averageIndividualPoseAngularJerk(x):
+    phi = getPoseAngularJerks(x)                                        # get joint angle time history
+    phi = np.mean(phi, axis=(1, 2))                                     # take time average
+    return phi
 
 # extract joint angles  from body pose
 # returns joint time history array N x 4 x num frames
@@ -65,6 +109,33 @@ def getPoseAngles(x):
             # offset the angle
             ang[:, j, i] += joint_offset[j]
     return ang
+    
+# extract joint angular velocities from body pose using forward finite difference
+# returns joint time history array N x 4 x (num frames - 1)
+def getPoseAngularVelocities(x):
+    # get angles
+    ang = getPoseAngles(x)
+    # calculate forward difference for first derivative
+    vel = ang[:, :, 1:] - ang[:, :, :-1]
+    return vel
+    
+# extract joint angular acceleration from body pose using forward finite difference
+# returns joint time history array N x 4 x (num frames - 2)
+def getPoseAngularAccelerations(x):
+    # get angles
+    ang = getPoseAngles(x)
+    # calculate forward difference for second derivative
+    acc = ang[:, :, 2:] - 2.0 * ang[:, :, 1:-1] + ang[:, :, :-2]
+    return acc
+
+# extract joint angular jerk from body pose using forward finite difference
+# returns joint time history array N x 4 x (num frames - 3)
+def getPoseAngularJerks(x):
+    # get angles
+    ang = getPoseAngles(x)
+    # calculate forward difference
+    jrk = ang[:, :, 3:] - 3.0 * (ang[:, :, 2:-1] - ang[:, :, 1:-2]) - ang[:, :, :-3]
+    return jrk
 
 if __name__ == '__main__':
     keypointFolder = '/home/ian/openpose/output/keypoints/'
@@ -72,5 +143,6 @@ if __name__ == '__main__':
     numFrames = 1
     pose = poseSequence2D(keypointFolder, keypointName, numFrames=44, hand=True)
     x = pose.linearClassifierFormatPose()
-    ang = getPoseAngles(x)
-    print ang
+    jrk = getPoseAngularJerks(x)
+    print jrk
+    print jrk.shape
